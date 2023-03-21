@@ -1,0 +1,24 @@
+[project]
+
+name= "fronius-robotraconteur-driver"
+version = "0.0.1"
+description = "Fronius Welder Robot Raconteur Driver"
+requires-python = ">=3.6"
+license = {file = "LICENSE.txt"}
+authors = [
+    {name = "John Wason", email = "wason@wasontech.com"}
+]
+
+dependencies = [
+    'pymodbus',
+    'RobotRaconteur',
+    'RobotRaconteurCompanion',
+    'numpy'
+]
+
+[build-system]
+build-backend = 'setuptools.build_meta'
+requires = [
+    'setuptools',
+    'toml',
+]

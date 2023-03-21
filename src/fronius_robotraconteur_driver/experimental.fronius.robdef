@@ -1,0 +1,153 @@
+service experimental.fronius
+
+stdver 0.10
+
+import com.robotraconteur.device.isoch
+import com.robotraconteur.device.clock
+import com.robotraconteur.datetime
+import com.robotraconteur.device
+
+using com.robotraconteur.device.DeviceInfo
+using com.robotraconteur.device.Device
+using com.robotraconteur.device.clock.DeviceClock
+using com.robotraconteur.device.clock.DeviceTime
+using com.robotraconteur.datetime.TimeSpec3
+using com.robotraconteur.device.isoch.IsochDevice
+using com.robotraconteur.device.isoch.IsochInfo
+
+enum WelderStateFlags
+    unknown = 0,
+    error = 0x1,
+    fatal_error = 0x2,
+    estop = 0x4,
+    enabled = 0x20000,
+    ready = 0x40000,
+    communication_failure = 0x200000
+end
+
+enum WelderStateHighFlags
+    # Output F101
+    arc_stable = 0x1,
+    current_flow = 0x2,
+    main_current_signal = 0x4,
+    torch_collision_protection = 0x8,
+    touched = 0x10,
+    torchbody_conneced = 0x20,
+    command_out_of_range = 0x40,
+    correction_out_of_range = 0x80,
+    process_active = 0x100,
+    robot_motion_release = 0x200,
+    wire_stick_workpiece = 0x400,
+    # Output F102
+    parameter_selection_internally = 0x1000,
+    characteristic_number_valid = 0x2000,
+    process_image_bit_0 = 0x4000,
+    process_image_bit_1 = 0x8000,
+    # Output F103
+    penetration_stabilizer = 0x10000,
+    arclength_stabilizer = 0x20000,
+    # Output F104
+    notification = 0x100000,
+    system_not_ready = 0x200000,
+    #Output F105
+    limit_signal = 0x1000000,
+    twin_sync_active = 0x2000000,
+    line_supply_status = 0x4000000,
+    warning = 0x8000000,
+end
+
+enum WelderProcess
+    internal = 0x0,
+    mig_mag_pulsed_synergic = 0x1,
+    mig_mag_standard_synergic = 0x2,
+    mig_mag_pmc = 0x3,
+    mig_mag_lsc = 0x4,
+    mig_mag_standard_manual = 0x5,
+    tig = 0x7,
+    cmt = 0x8
+end
+
+enum WelderSensorStatus
+    opti_wf_r_wire_end = 0x1,
+    opti_wf_r_de_wire_drum = 0x2,
+    opti_wf_r_de_ring_sensor = 0x4
+end
+
+enum WelderSafetyStatus
+    reserve = 0,
+    hold = 1,
+    stop = 2,
+    not_active = 3
+end
+
+enum WelderProcessLine
+    process_line_1 = 0,
+    process_line_2 = 1,
+    process_line_3 = 2
+end
+
+enum WelderTwinMode
+    twin_single_mode = 0,
+    twin_lead_mode = 1,
+    twin_trail_mode = 2
+end
+
+enum WelderWorkingMode
+    internal = 0x0,
+    special_two_step = 0x1,
+    job_mode = 0x2,
+    two_step_mode_characteristics = 0x8
+end
+
+struct FroniusWelderState
+    field TimeSpec3 ts
+    field uint64 seqno
+    field uint64 welder_state_flags
+    field WelderProcess welding_process
+    field WelderSensorStatus sensor_status
+    field WelderSafetyStatus safety_status
+    field uint16 main_error
+    field uint16 warning
+    field double welding_voltage
+    field double welding_current
+    field double motor_current_m1
+    field double motor_current_m2
+    field double motor_current_m3
+    field double wire_speed
+    field double seam_tracking
+    field double welding_energy
+    field double wire_position
+    
+end
+
+object FroniusWelder
+    implements Device
+    implements DeviceClock
+    implements IsochDevice
+    property DeviceInfo device_info [readonly,nolock]
+
+    property WelderProcessLine process_line
+    property WelderTwinMode twin_mode
+    property WelderWorkingMode working_mode
+
+    property uint16 job_number
+
+    function void prepare_welder()
+    function void release_welder()
+
+    function void start_weld()
+    function void stop_weld()
+
+    function void reset_errors()
+    wire FroniusWelderState welder_state [readonly,nolock]
+    wire double welding_speed [writeonly]
+
+    function varvalue getf_param(string param_name)
+    function void setf_param(string param_name, varvalue value)
+    event param_changed(string param_name)
+
+    property IsochInfo isoch_info [readonly,nolock]
+    property uint32 isoch_downsample [perclient]
+    wire DeviceTime device_clock_now [readonly,nolock]
+
+end
