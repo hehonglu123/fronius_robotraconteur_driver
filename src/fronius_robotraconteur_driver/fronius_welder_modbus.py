@@ -88,7 +88,7 @@ class WelderImpl:
                 modbus.connect()
 
                 while self._keep_going:
-                    read_res = modbus.read_holding_registers(0xF000,30)
+                    read_res = modbus.read_holding_registers(0xF100,30)
 
                     read_regs = [read_res.getRegister(i) for i in range(30)]
 
@@ -125,7 +125,7 @@ class WelderImpl:
             "arc_stable": 2,
             "current_flow": 3,
             "main_current_signal": 4,
-            "touch_collision_protection": 5,
+            "torch_collision_protection": 5,
             "touched": 8,
             "torchbody_connected": 9,
             "command_out_of_range": 10,

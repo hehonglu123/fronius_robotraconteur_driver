@@ -32,7 +32,7 @@ enum WelderStateHighFlags
     main_current_signal = 0x4,
     torch_collision_protection = 0x8,
     touched = 0x10,
-    torchbody_conneced = 0x20,
+    torchbody_connected = 0x20,
     command_out_of_range = 0x40,
     correction_out_of_range = 0x80,
     process_active = 0x100,
