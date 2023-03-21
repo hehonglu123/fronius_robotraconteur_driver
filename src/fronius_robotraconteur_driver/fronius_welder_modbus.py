@@ -32,7 +32,7 @@ def _bit(b):
     return 1 << b
 
 def _unpack_flags(flags_in, reg_in, flag_map, flag_out_consts):
-    for flag_name, flag_bit in flag_map:
+    for flag_name, flag_bit in flag_map.items():
         if (reg_in & _bit(flag_bit)) != 0:
             flags_in |= flag_out_consts[flag_name]
     return flags_in
@@ -163,12 +163,12 @@ class WelderImpl:
         ret.sensor_status = regs[4] & 0b111
         ret.safety_status = (regs[4] >> 11) & 0b11
 
-        ret.state_flags = (hflags << 32) | flags
+        ret.welder_state_flags = (hflags << 32) | flags
 
         ret.main_error = regs[8]
         ret.warning = regs[9]
         ret.welding_voltage = _uint16_to_float(regs[0xA],100)
-        ret.welding_current = _uint16_to_float(regs(0xB),10)
+        ret.welding_current = _uint16_to_float(regs[0xB],10)
         ret.motor_current_m1 = _uint16_to_float(regs[0xC],100)
         ret.motor_current_m2 = _uint16_to_float(regs[0xD],100)
         ret.motor_current_m3 = _uint16_to_float(regs[0xE],100)
