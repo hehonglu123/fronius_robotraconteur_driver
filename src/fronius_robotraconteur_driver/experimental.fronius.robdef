@@ -99,6 +99,11 @@ enum WelderWorkingMode
     two_step_mode_characteristics = 0x8
 end
 
+enum WelderCommandValue
+    wirefeeder = 0,
+    welding_current = 1
+end
+
 struct FroniusWelderState
     field TimeSpec3 ts
     field uint64 seqno
@@ -129,8 +134,10 @@ object FroniusWelder
     property WelderProcessLine process_line
     property WelderTwinMode twin_mode
     property WelderWorkingMode working_mode
+    property WelderCommandValue welder_command
 
     property uint16 job_number
+    property uint16 program_number
 
     function void prepare_welder()
     function void release_welder()
@@ -138,9 +145,22 @@ object FroniusWelder
     function void start_weld()
     function void stop_weld()
 
+    function void gas_on(double duration_seconds)
+    function void wire_inching(double duration_seconds)
+    function void wire_retract(double duration_seconds)
+    function void torch_blowout(double duration_seconds)
+    function bool touch_sensing(double timeout_seconds)
+    function void start_wire_sense(double edge)
+    function void stop_wire_sense(bool wire_sense_break)
+
+    property double arc_length_correction
+    property double puls_dynamik_correction
+    property uint16 seam_number
+
     function void reset_errors()
     wire FroniusWelderState welder_state [readonly,nolock]
     wire double welding_speed [writeonly]
+    wire double wire_feeder_command [writeonly]
 
     function varvalue getf_param(string param_name)
     function void setf_param(string param_name, varvalue value)
