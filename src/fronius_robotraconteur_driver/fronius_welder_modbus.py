@@ -126,6 +126,7 @@ class WelderImpl:
         self._wire_retract = False
         self._torch_blowout = False
         self._touch_sensing = False
+        self._error_reset = False
 
         time.sleep(1)
 
@@ -395,7 +396,11 @@ class WelderImpl:
         assert value >= 0 and value <= 10
         self._arc_length_stabilizer = value
 
-
+    def reset_errors(self):
+        with self._command_lock:
+            self._error_reset = True
+            time.sleep(0.1)
+            self._error_reset = False
     
 
 def main():
