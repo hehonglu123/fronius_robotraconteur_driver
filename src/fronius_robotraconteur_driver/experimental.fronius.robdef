@@ -149,13 +149,16 @@ object FroniusWelder
     function void wire_inching(double duration_seconds)
     function void wire_retract(double duration_seconds)
     function void torch_blowout(double duration_seconds)
-    function bool touch_sensing(double timeout_seconds)
+    function void start_touch_sensing()
+    function void stop_touch_sensing()
     function void start_wire_sense(double edge)
     function void stop_wire_sense(bool wire_sense_break)
 
     property double arc_length_correction
     property double puls_dynamik_correction
     property uint16 seam_number
+    property double penetration_stabilizer
+    property double arc_length_stabilizer
 
     function void reset_errors()
     wire FroniusWelderState welder_state [readonly,nolock]
