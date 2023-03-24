@@ -17,7 +17,7 @@ from contextlib import suppress
 from pymodbus.client import ModbusTcpClient
 
 def _uint16_to_sint16(u16_val):
-    if  (0xF000 & u16_val) == 0:
+    if  (0x8000 & u16_val) == 0:
         return u16_val
     else:
         return u16_val - 0x10000
