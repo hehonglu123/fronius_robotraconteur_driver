@@ -6,6 +6,7 @@ import com.robotraconteur.device.isoch
 import com.robotraconteur.device.clock
 import com.robotraconteur.datetime
 import com.robotraconteur.device
+import com.robotraconteur.sensordata
 
 using com.robotraconteur.device.DeviceInfo
 using com.robotraconteur.device.Device
@@ -14,6 +15,7 @@ using com.robotraconteur.device.clock.DeviceTime
 using com.robotraconteur.datetime.TimeSpec3
 using com.robotraconteur.device.isoch.IsochDevice
 using com.robotraconteur.device.isoch.IsochInfo
+using com.robotraconteur.sensordata.SensorDataHeader
 
 enum WelderStateFlags
     unknown = 0,
@@ -125,6 +127,11 @@ struct FroniusWelderState
     
 end
 
+struct FroniusWelderStateSensorData
+    field SensorDataHeader data_header
+    field FroniusWelderState welder_state
+end
+
 struct FroniusWelderInfo
     field DeviceInfo device_info
 end
@@ -169,6 +176,7 @@ object FroniusWelder
 
     function void reset_errors()
     wire FroniusWelderState welder_state [readonly,nolock]
+    pipe FroniusWelderStateSensorData welder_state_sensor_data [readonly,nolock]
     wire double welding_speed [writeonly]
     wire double wire_feeder_command [writeonly]
 

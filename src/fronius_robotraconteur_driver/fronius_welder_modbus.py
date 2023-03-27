@@ -77,6 +77,7 @@ class WelderImpl:
         self._welder_state_flags = self._welder_const["WelderStateFlags"]
         self._welder_state_high_flags = self._welder_const["WelderStateHighFlags"]
         self._welder_state_type = RRN.GetStructureType("experimental.fronius.FroniusWelderState")
+        self._welder_state_sensor_data_type = RRN.GetStructureType("experimental.fronius.FroniusWelderStateSensorData")
 
         self._lock = threading.Lock()
 
@@ -169,14 +170,18 @@ class WelderImpl:
             if s is None:
                 state_struct = self._welder_state_type()
                 state_struct.welder_state_flags |= self._welder_state_flags["communication_failure"]
-                state_struct.seqno = self._seqno
-                state_struct.ts = ts
-                self.welder_state.OutValue = state_struct
             else:
                 state_struct = self._welder_modbus_regs_to_state(s)
-                state_struct.seqno = self._seqno
-                state_struct.ts = ts
-                self.welder_state.OutValue = state_struct
+
+            sensor_data_header = self._sensor_data_util.FillSensorDataHeader(self.device_info, self._seqno)
+
+            state_struct.seqno = self._seqno
+            state_struct.ts = ts
+            state_struct_sensor_data = self._welder_state_sensor_data_type()
+            state_struct_sensor_data.data_header = sensor_data_header
+            state_struct_sensor_data.welder_state = state_struct
+            self.welder_state.OutValue = state_struct
+            self.welder_state_sensor_data.AsyncSendPacket(state_struct_sensor_data, lambda: None)
 
             device_now = self._datetime_util.FillDeviceTime(self.device_info,self._seqno)
             self.device_clock_now.OutValue = device_now
