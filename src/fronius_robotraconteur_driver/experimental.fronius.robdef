@@ -152,7 +152,8 @@ object FroniusWelder
     function void start_touch_sensing()
     function void stop_touch_sensing()
     function void start_wire_sense(double edge)
-    function void stop_wire_sense(bool wire_sense_break)
+    function void stop_wire_sense()
+    function void wire_sense_break()
 
     property double arc_length_correction
     property double puls_dynamik_correction

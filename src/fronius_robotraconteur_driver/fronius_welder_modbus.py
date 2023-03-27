@@ -121,6 +121,10 @@ class WelderImpl:
         self._working_mode = 2
         self._welder_command_mode = 0
 
+        self._wire_sense_start = False
+        self._wire_sense_break = False
+        self._wire_sense_edge = 0.0
+
 
     def RRServiceObjectInit(self, ctx, service_path):
         self._downsampler = RR.BroadcastDownsampler(ctx)
@@ -316,7 +320,6 @@ class WelderImpl:
         if self._touch_sensing:
             control_flags2 |= _bit(8)
 
-        # TODO wire_sense
         regs[1] = control_flags2
 
         # process line, twin, active heat control, wire sense start/break
@@ -324,7 +327,12 @@ class WelderImpl:
         if self._active_heat_control:
              control_flags3 |= _bit(10)
 
-        #TODO: wire sensing        
+        if self._wire_sense_start:
+            control_flags3 |= _bit(11)
+
+        if self._wire_sense_break:
+            control_flags3 |= _bit(12)
+
         regs[2] = control_flags3
 
         # working mode
@@ -339,6 +347,9 @@ class WelderImpl:
 
         with suppress(RR.ValueNotSetException,AttributeError):
             regs[0xF] = _float_to_uint16(self.welding_speed.InValue[0],10,False)
+
+        # Wire sense edge detection
+        regs[0x1B] = _float_to_uint16(self._wire_sense_edge, 10, False)
 
         return regs
     
@@ -521,6 +532,23 @@ class WelderImpl:
         assert value in (0,1,2,8), "Invalid welder command mode value"
         assert not self._robot_ready, "Cannot change welder command mode while welder is enabled"
         self._welder_command_mode = value
+
+    def start_wire_sense(self, edge):
+        with self._lock:
+            self._wire_sense_edge = edge
+            self._wire_sense_start = True
+            time.sleep(0.01)
+
+    def stop_wire_sense(self):
+        with self._lock:
+            self._wire_sense_start = False
+            self._wire_sense_edge = 0.0
+
+    def wire_sense_break(self):
+        with self._lock:
+            self._wire_sense_break = True
+            time.sleep(0.1)
+            self._wire_sense_break = False
 
 def main():
     parser = argparse.ArgumentParser(description="Fronius Welder Power Source")
