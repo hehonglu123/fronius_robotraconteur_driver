@@ -4,15 +4,26 @@ from RobotRaconteur.Client import *
 import time
 
 # Adjust the connection URL to the driver
-c = RRN.ConnectService('rr+tcp://localhost:60823?service=welder')
+sub = RRN.SubscribeService('rr+tcp://localhost:60823?service=welder')
 
-consts = RRN.GetConstants("experimental.fronius", c)
-flags_const = consts["WelderStateFlags"]
-hflags_const = consts["WelderStateHighFlags"]
-
+consts = None
 
 while True:
-    state, _ = c.welder_state.PeekInValue()
+
+    res, c = sub.TryGetDefaultClientWait(5)
+    if not res:
+        print("Driver not available")
+        continue
+
+    if consts is None:    
+        consts = RRN.GetConstants("experimental.fronius", c)
+        flags_const = consts["WelderStateFlags"]
+        hflags_const = consts["WelderStateHighFlags"]
+    try:
+        state, _ = c.welder_state.PeekInValue()
+    except RR.ValueNotSetException:
+        time.sleep(0.1)
+        continue
 
     flags_str = []
 
