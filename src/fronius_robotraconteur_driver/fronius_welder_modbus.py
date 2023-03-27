@@ -61,9 +61,10 @@ def _unpack_flags(flags_in, reg_in, flag_map, flag_out_consts):
     return flags_in
 
 class WelderImpl:
-    def __init__(self, welder_ip, device_info, monitor_only = False):
+    def __init__(self, welder_ip, welder_info, monitor_only = False):
         
-        self.device_info = device_info
+        self.device_info = welder_info.device_info
+        self.welder_info = welder_info
 
         self._welder_ip = welder_ip
         self._monitor_only = monitor_only
@@ -176,6 +177,9 @@ class WelderImpl:
                 state_struct.seqno = self._seqno
                 state_struct.ts = ts
                 self.welder_state.OutValue = state_struct
+
+            device_now = self._datetime_util.FillDeviceTime(self.device_info,self._seqno)
+            self.device_clock_now.OutValue = device_now
 
             rate.Sleep()
 
@@ -553,6 +557,7 @@ class WelderImpl:
 def main():
     parser = argparse.ArgumentParser(description="Fronius Welder Power Source")
 
+    parser.add_argument("--welder-info-file", type=argparse.FileType('r'),default=None,required=True,help="Welder info file (required)")
     parser.add_argument("--welder-ip", type=str, required=True, help="IP address of welder ModBus module (different than HTML interface)")
     parser.add_argument("--monitor-only", action="store_true", default=False, help="Only read the device feedback, do not send commands")
     parser.add_argument("--wait-signal",action='store_const',const=True,default=False, help="wait for SIGTERM orSIGINT (Linux only)")
@@ -563,12 +568,22 @@ def main():
 
     register_service_types_from_resources(RRN, __package__, ["experimental.fronius"])
 
-    welder = WelderImpl(args.welder_ip, None, args.monitor_only)
+    with args.welder_info_file:
+        welder_info_text = args.welder_info_file.read()
+
+    info_loader = InfoFileLoader(RRN)
+    welder_info, welder_ident_fd = info_loader.LoadInfoFileFromString(welder_info_text, "experimental.fronius.FroniusWelderInfo", "device")
+
+    attributes_util = AttributesUtil(RRN)
+    welder_attributes = attributes_util.GetDefaultServiceAttributesFromDeviceInfo(welder_info.device_info)
+
+    welder = WelderImpl(args.welder_ip, welder_info, args.monitor_only)
 
     try:
         with RR.ServerNodeSetup("fronius.welder",60823):
 
             service_ctx = RRN.RegisterService("welder","experimental.fronius.FroniusWelder",welder)
+            service_ctx.SetServiceAttributes(welder_attributes)
             welder._start()
 
             if args.wait_signal:  

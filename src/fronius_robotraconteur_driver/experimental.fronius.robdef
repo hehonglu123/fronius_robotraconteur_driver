@@ -125,11 +125,16 @@ struct FroniusWelderState
     
 end
 
+struct FroniusWelderInfo
+    field DeviceInfo device_info
+end
+
 object FroniusWelder
     implements Device
     implements DeviceClock
     implements IsochDevice
     property DeviceInfo device_info [readonly,nolock]
+    property FroniusWelderInfo welder_info [readonly,nolock]
 
     property WelderProcessLine process_line
     property WelderTwinMode twin_mode
