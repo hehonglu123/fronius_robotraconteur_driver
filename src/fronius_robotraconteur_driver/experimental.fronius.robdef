@@ -99,7 +99,7 @@ enum WelderWorkingMode
     two_step_mode_characteristics = 0x8
 end
 
-enum WelderCommandValue
+enum WelderCommandModeValue
     wirefeeder = 0,
     welding_current = 1
 end
@@ -134,7 +134,7 @@ object FroniusWelder
     property WelderProcessLine process_line
     property WelderTwinMode twin_mode
     property WelderWorkingMode working_mode
-    property WelderCommandValue welder_command
+    property WelderCommandModeValue welder_command_mode
 
     property uint16 job_number
     property uint16 program_number
@@ -159,6 +159,7 @@ object FroniusWelder
     property uint16 seam_number
     property double penetration_stabilizer
     property double arc_length_stabilizer
+    property bool active_heat_control
 
     function void reset_errors()
     wire FroniusWelderState welder_state [readonly,nolock]

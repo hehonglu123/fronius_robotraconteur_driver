@@ -103,6 +103,7 @@ class WelderImpl:
         self.seam_number = 0
         self._penetration_stabilizer = 0.0
         self._arc_length_stabilizer = 0.0
+        self._active_heat_control = False
 
         self._date_time_utc_type = RRN.GetPodDType('com.robotraconteur.datetime.DateTimeUTC')
         self._isoch_info = RRN.GetStructureType('com.robotraconteur.device.isoch.IsochInfo')
@@ -114,6 +115,12 @@ class WelderImpl:
 
         self._recv_regs = None
         self._seqno = 0
+
+        self._process_line = 0
+        self._twin_mode = 0
+        self._working_mode = 2
+        self._welder_command_mode = 0
+
 
     def RRServiceObjectInit(self, ctx, service_path):
         self._downsampler = RR.BroadcastDownsampler(ctx)
@@ -312,9 +319,16 @@ class WelderImpl:
         # TODO wire_sense
         regs[1] = control_flags2
 
+        # process line, twin, active heat control, wire sense start/break
+        control_flags3 = (self._process_line & 0b11) | ((self._twin_mode & 0x11) << 2)
+        if self._active_heat_control:
+             control_flags3 |= _bit(10)
+
+        #TODO: wire sensing        
+        regs[2] = control_flags3
+
         # working mode
-        # TODO use parameter
-        regs[8] = 2
+        regs[8] = self._working_mode | ((self._welder_command_mode & 0x1) << 14)
 
         regs[9] = self._job_number
         regs[0xA] = self._program_number
@@ -438,6 +452,13 @@ class WelderImpl:
         assert value >= 0 and value <= 10
         self._arc_length_stabilizer = value
 
+    @property
+    def active_heat_control(self):
+        return self._active_heat_control
+    @active_heat_control.setter
+    def active_heat_control(self,value):
+        self._active_heat_control = value
+
     def reset_errors(self):
         with self._command_lock:
             self._error_reset = True
@@ -458,7 +479,48 @@ class WelderImpl:
         ret.update_rate = 100
         ret.max_downsample = 100
         ret.isoch_epoch = np.zeros((1,),dtype=self._date_time_utc_type)
+
+    def getf_param(self, param_name):
+        raise RR.InvalidArgumentException("Invalid parameter")
+
+    def setf_param(self, param_name, value):
+        raise RR.InvalidArgumentException("Invalid parameter")
     
+    @property 
+    def process_line(self):
+        return self._process_line    
+    @process_line.setter
+    def process_line(self,value):
+        assert value in (0,1,2), "Invalid process line value"
+        assert not self._robot_ready, "Cannot change process line while welder is enabled"
+        self._process_line = value
+
+    @property 
+    def twin_mode(self):
+        return self._twin_mode    
+    @twin_mode.setter
+    def twin_mode(self,value):
+        assert value in (0,1,2), "Invalid twin mode value"
+        assert not self._robot_ready, "Cannot change twin mode while welder is enabled"
+        self._twin_mode = value
+
+    @property 
+    def working_mode(self):
+        return self._working_mode
+    @working_mode.setter
+    def working_mode(self,value):
+        assert value in (0,1,2,8), "Invalid working mode value"
+        assert not self._robot_ready, "Cannot change working mode while welder is enabled"
+        self._working_mode = value
+
+    @property 
+    def welder_command_mode(self):
+        return self._welder_command_mode
+    @welder_command_mode.setter
+    def welder_command_mode(self,value):
+        assert value in (0,1,2,8), "Invalid welder command mode value"
+        assert not self._robot_ready, "Cannot change welder command mode while welder is enabled"
+        self._welder_command_mode = value
 
 def main():
     parser = argparse.ArgumentParser(description="Fronius Welder Power Source")
