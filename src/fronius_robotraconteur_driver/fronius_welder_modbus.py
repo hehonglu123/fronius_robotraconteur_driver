@@ -16,6 +16,8 @@ from contextlib import suppress
 
 from pymodbus.client import ModbusTcpClient
 
+import numpy as np
+
 def _uint16_to_sint16(u16_val):
     if  (0x8000 & u16_val) == 0:
         return u16_val
@@ -82,7 +84,8 @@ class WelderImpl:
         self._connected = False
 
         self._keep_going = False
-        self._thread = None
+        self._modbus_thread = None
+        self._state_thread = None
 
         self._robot_ready = False
         self._start_weld = False
@@ -101,8 +104,16 @@ class WelderImpl:
         self._penetration_stabilizer = 0.0
         self._arc_length_stabilizer = 0.0
 
+        self._date_time_utc_type = RRN.GetPodDType('com.robotraconteur.datetime.DateTimeUTC')
+        self._isoch_info = RRN.GetStructureType('com.robotraconteur.device.isoch.IsochInfo')
+
+        self._datetime_util = DateTimeUtil(RRN)
+        self._sensor_data_util = SensorDataUtil(RRN)
 
         self._command_lock = threading.Lock()
+
+        self._recv_regs = None
+        self._seqno = 0
 
     def RRServiceObjectInit(self, ctx, service_path):
         self._downsampler = RR.BroadcastDownsampler(ctx)
@@ -112,9 +123,12 @@ class WelderImpl:
     def _start(self):
         with self._lock:
             self._keep_going = True
-            self._thread = threading.Thread(target=self._run)
-            self._thread.daemon = True
-            self._thread.start()
+            self._modbus_thread = threading.Thread(target=self._run_modbus)
+            self._state_thread = threading.Thread(target=self._run_state_update)
+            self._modbus_thread.daemon = True
+            self._state_thread.daemon = True
+            self._modbus_thread.start()
+            self._state_thread.start()
 
     def _stop(self):
         assert self._keep_going
@@ -132,11 +146,33 @@ class WelderImpl:
 
         with self._lock:
             self._keep_going = False
-        self._thread.join()
+        self._modbus_thread.join()
 
-    def _run(self):
+    def _run_state_update(self):
+        rate = RRN.CreateRate(100)
+        while self._keep_going:
+            self._seqno += 1
+            s = self._recv_regs
+            ts = self._datetime_util.TimeSpec3Now()
+            if s is None:
+                state_struct = self._welder_state_type()
+                state_struct.welder_state_flags |= self._welder_state_flags["communication_failure"]
+                state_struct.seqno = self._seqno
+                state_struct.ts = ts
+                self.welder_state.OutValue = state_struct
+            else:
+                state_struct = self._welder_modbus_regs_to_state(s)
+                state_struct.seqno = self._seqno
+                state_struct.ts = ts
+                self.welder_state.OutValue = state_struct
+
+            rate.Sleep()
+
+    def _run_modbus(self):
+        rate = RRN.CreateRate(100)
         while self._keep_going:
             modbus = None
+            self._recv_regs = None
             try:
                 modbus = ModbusTcpClient(self._welder_ip)
                 modbus.connect()
@@ -148,18 +184,24 @@ class WelderImpl:
                     else:
                         control_reg = self._current_command_to_regs()
                         read_res = modbus.readwrite_registers(0xF100, 30, 0xF000, write_registers=control_reg[0:30])
+                        if read_res.isError():
+                            raise read_res
                         assert(read_res.function_code < 0x80)
                         read_regs = read_res.registers
 
-                    state_struct = self._welder_modbus_regs_to_state(read_regs)
+                    # state_struct = self._welder_modbus_regs_to_state(read_regs)
 
-                    self.welder_state.OutValue = state_struct
+                    # self.welder_state.OutValue = state_struct
+                    self._recv_regs = read_regs
 
-                    time.sleep(0.1)
+                    # time.sleep(0.1)
+                    rate.Sleep()
             except:
+                self._recv_regs = None
                 traceback.print_exc()
                 time.sleep(0.25)
             finally:
+                self._recv_regs = None
                 with suppress(Exception):
                     modbus.close()
 
@@ -401,6 +443,21 @@ class WelderImpl:
             self._error_reset = True
             time.sleep(0.1)
             self._error_reset = False
+
+    @property
+    def isoch_downsample(self):
+        return self._downsampler.GetClientDownsample(RR.ServerEndpoint.GetCurrentEndpoint())
+
+    @isoch_downsample.setter
+    def isoch_downsample(self, value):
+        return self._downsampler.SetClientDownsample(RR.ServerEndpoint.GetCurrentEndpoint(),value)
+
+    @property
+    def isoch_info(self):
+        ret = self._isoch_info()
+        ret.update_rate = 100
+        ret.max_downsample = 100
+        ret.isoch_epoch = np.zeros((1,),dtype=self._date_time_utc_type)
     
 
 def main():
