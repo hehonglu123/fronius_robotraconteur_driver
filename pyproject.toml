@@ -22,3 +22,6 @@ requires = [
     'setuptools',
     'toml',
 ]
+
+[project.scripts]
+fronius-robotraconteur-driver = "fronius_robotraconteur_driver.fronius_welder_modbus:main"
