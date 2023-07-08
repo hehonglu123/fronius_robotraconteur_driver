@@ -18,6 +18,10 @@ from pymodbus.client import ModbusTcpClient
 
 import numpy as np
 
+import RPi.GPIO as GPIO
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(17, GPIO.IN)
+
 def _uint16_to_sint16(u16_val):
     if  (0x8000 & u16_val) == 0:
         return u16_val
@@ -198,6 +202,10 @@ class WelderImpl:
                 modbus.connect()
 
                 while self._keep_going:
+                    
+                    if not GPIO.input(17):      ###ESTOP Checking
+                        self.release_welder()
+
                     if self._monitor_only:
                         read_res = modbus.read_holding_registers(0xF100,30)
                         read_regs = [read_res.getRegister(i) for i in range(30)]
