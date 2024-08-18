@@ -380,6 +380,9 @@ class WelderImpl:
         self._start_weld = False
 
     def start_weld(self):
+        if not GPIO.input(17):      ###ESTOP Checking
+            raise Exception("E-Stop is pressed")
+        
         with self._command_lock:
             self._start_weld = True
     
